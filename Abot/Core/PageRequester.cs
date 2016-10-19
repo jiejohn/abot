@@ -6,10 +6,11 @@ using System.Linq;
 using System.Net;
 using System.Reflection;
 using System.Threading.Tasks;
+using log4net.Core;
 
 namespace Abot.Core
 {
-    public interface IPageRequester
+    public interface IPageRequester : IDisposable
     {
         /// <summary>
         /// Make an http web request to the url and download its content
@@ -34,7 +35,7 @@ namespace Abot.Core
 
         protected CrawlConfiguration _config;
         protected IWebContentExtractor _extractor;
-        protected CookieContainer container = new CookieContainer();
+        protected CookieContainer _cookieContainer = new CookieContainer();
 
         public PageRequester(CrawlConfiguration config)
             : this(config, null)
@@ -51,6 +52,10 @@ namespace Abot.Core
 
             if (_config.HttpServicePointConnectionLimit > 0)
                 ServicePointManager.DefaultConnectionLimit = _config.HttpServicePointConnectionLimit;
+
+            if (!_config.IsSslCertificateValidationEnabled)
+                ServicePointManager.ServerCertificateValidationCallback +=
+                    (sender, certificate, chain, sslPolicyErrors) => true;
 
             _extractor = contentExtractor ?? new WebContentExtractor();
         }
@@ -99,24 +104,32 @@ namespace Abot.Core
             }
             finally
             {
-                crawledPage.HttpWebRequest = request;
-                crawledPage.RequestCompleted = DateTime.Now;
-                if (response != null)
+                try
                 {
-                    crawledPage.HttpWebResponse = new HttpWebResponseWrapper(response);
-                    CrawlDecision shouldDownloadContentDecision = shouldDownloadContent(crawledPage);
-                    if (shouldDownloadContentDecision.Allow)
+                    crawledPage.HttpWebRequest = request;
+                    crawledPage.RequestCompleted = DateTime.Now;
+                    if (response != null)
                     {
-                        crawledPage.DownloadContentStarted = DateTime.Now;
-                        crawledPage.Content = _extractor.GetContent(response);
-                        crawledPage.DownloadContentCompleted = DateTime.Now;
-                    }
-                    else
-                    {
-                        _logger.DebugFormat("Links on page [{0}] not crawled, [{1}]", crawledPage.Uri.AbsoluteUri, shouldDownloadContentDecision.Reason);    
-                    }
+                        crawledPage.HttpWebResponse = new HttpWebResponseWrapper(response);
+                        CrawlDecision shouldDownloadContentDecision = shouldDownloadContent(crawledPage);
+                        if (shouldDownloadContentDecision.Allow)
+                        {
+                            crawledPage.DownloadContentStarted = DateTime.Now;
+                            crawledPage.Content = _extractor.GetContent(response);
+                            crawledPage.DownloadContentCompleted = DateTime.Now;
+                        }
+                        else
+                        {
+                            _logger.DebugFormat("Links on page [{0}] not crawled, [{1}]", crawledPage.Uri.AbsoluteUri, shouldDownloadContentDecision.Reason);
+                        }
 
-                    response.Close();//Should already be closed by _extractor but just being safe
+                        response.Close();//Should already be closed by _extractor but just being safe
+                    }
+                }
+                catch (Exception e)
+                {
+                    _logger.DebugFormat("Error occurred finalizing requesting url [{0}]", uri.AbsoluteUri);
+                    _logger.Debug(e);
                 }
             }
 
@@ -157,7 +170,7 @@ namespace Abot.Core
 
         //            if (crawledPage.WebException != null && crawledPage.WebException.Response != null)
         //                response = (HttpWebResponse)crawledPage.WebException.Response;
-                    
+
         //            _logger.DebugFormat("Error occurred requesting url [{0}]", uri.AbsoluteUri);
         //            _logger.Debug(crawledPage.WebException);
         //        }
@@ -197,17 +210,29 @@ namespace Abot.Core
             request.UserAgent = _config.UserAgentString;
             request.Accept = "*/*";
 
-            if(_config.HttpRequestMaxAutoRedirects > 0)
+            if (_config.HttpRequestMaxAutoRedirects > 0)
                 request.MaximumAutomaticRedirections = _config.HttpRequestMaxAutoRedirects;
 
             if (_config.IsHttpRequestAutomaticDecompressionEnabled)
                 request.AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate;
 
-            if(_config.HttpRequestTimeoutInSeconds > 0)
+            if (_config.HttpRequestTimeoutInSeconds > 0)
                 request.Timeout = _config.HttpRequestTimeoutInSeconds * 1000;
 
             if (_config.IsSendingCookiesEnabled)
-                request.CookieContainer = container;
+                request.CookieContainer = _cookieContainer;
+
+            //Supposedly this does not work... https://github.com/sjdirect/abot/issues/122
+            //if (_config.IsAlwaysLogin)
+            //{
+            //    request.Credentials = new NetworkCredential(_config.LoginUser, _config.LoginPassword);
+            //    request.UseDefaultCredentials = false;
+            //}
+            if (_config.IsAlwaysLogin)
+            {
+                string credentials = Convert.ToBase64String(System.Text.Encoding.ASCII.GetBytes(_config.LoginUser + ":" + _config.LoginPassword));
+                request.Headers[HttpRequestHeader.Authorization] = "Basic " + credentials;
+            }
 
             return request;
         }
@@ -217,8 +242,18 @@ namespace Abot.Core
             if (response != null && _config.IsSendingCookiesEnabled)
             {
                 CookieCollection cookies = response.Cookies;
-                container.Add(cookies);
+                _cookieContainer.Add(cookies);
             }
+        }
+
+        public void Dispose()
+        {
+            if (_extractor != null)
+            {
+                _extractor.Dispose();
+            }
+            _cookieContainer = null;
+            _config = null;
         }
     }
 }

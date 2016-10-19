@@ -20,6 +20,7 @@ namespace Abot.Poco
             MaxCrawlDepth = 100;
             HttpServicePointConnectionLimit = 200;
             HttpRequestTimeoutInSeconds = 15;
+            IsSslCertificateValidationEnabled = true;
         }
 
         #region crawlBehavior
@@ -30,8 +31,8 @@ namespace Abot.Poco
         public int MaxConcurrentThreads { get; set; }
 
         /// <summary>
-        /// Maximum number of pages to crawl.
-        /// This value is required.
+        /// Maximum number of pages to crawl. 
+        /// If zero, this setting has no effect
         /// </summary>
         public int MaxPagesToCrawl { get; set; }
 
@@ -86,9 +87,14 @@ namespace Abot.Poco
         public bool IsExternalPageLinksCrawlingEnabled { get; set; }
 
         /// <summary>
+        /// Whether or not url named anchors or hashbangs are considered part of the url. If false, they will be ignored. If true, they will be considered part of the url.
+        /// </summary>
+        public bool IsRespectUrlNamedAnchorOrHashbangEnabled { get; set; }
+
+        /// <summary>
         /// A comma seperated string that has content types that should have their page content downloaded. For each page, the content type is checked to see if it contains any of the values defined here.
         /// </summary>
-        public string DownloadableContentTypes { get; set; } 
+        public string DownloadableContentTypes { get; set; }
 
         /// <summary>
         /// Gets or sets the maximum number of concurrent connections allowed by a System.Net.ServicePoint. The system default is 2. This means that only 2 concurrent http connections can be open to the same host.
@@ -124,6 +130,13 @@ namespace Abot.Poco
         public bool IsSendingCookiesEnabled { get; set; }
 
         /// <summary>
+        /// Whether or not to validate the server SSL certificate. If true, the default validation will be made.
+        /// If false, the certificate validation is bypassed. This setting is useful to crawl sites with an
+        /// invalid or expired SSL certificate.
+        /// </summary>
+        public bool IsSslCertificateValidationEnabled { get; set; }
+
+        /// <summary>
         /// Uses closest mulitple of 16 to the value set. If there is not at least this much memory available before starting a crawl, throws InsufficientMemoryException.
         /// If zero, this setting has no effect.
         /// </summary>
@@ -146,6 +159,12 @@ namespace Abot.Poco
         /// Maximum levels below root page to crawl. If value is 0, the homepage will be crawled but none of its links will be crawled. If the level is 1, the homepage and its links will be crawled but none of the links links will be crawled.
         /// </summary>
         public int MaxCrawlDepth { get; set; }
+
+        /// <summary>
+        /// Maximum links to crawl per page.
+        /// If value is zero, this setting has no effect.
+        /// </summary>
+        public int MaxLinksPerPage { get; set; }
 
         /// <summary>
         /// Gets or sets a value that indicates whether the crawler should parse the page's links even if a CrawlDecision (like CrawlDecisionMaker.ShouldCrawlPageLinks()) determines that those links will not be crawled.
@@ -177,6 +196,11 @@ namespace Abot.Poco
         public bool IsRespectMetaRobotsNoFollowEnabled { get; set; }
 
         /// <summary>
+        /// Whether the crawler should ignore links on pages that have an http X-Robots-Tag header of nofollow
+        /// </summary>
+        public bool IsRespectHttpXRobotsTagHeaderNoFollowEnabled { get; set; }
+
+        /// <summary>
         /// Whether the crawler should ignore links that have a <a href="whatever" rel="nofollow">...
         /// </summary>
         public bool IsRespectAnchorRelNoFollowEnabled { get; set; }
@@ -195,6 +219,23 @@ namespace Abot.Poco
         /// The number of milliseconds to wait in between http requests to the same domain.
         /// </summary>
         public int MinCrawlDelayPerDomainMilliSeconds { get; set; }
+
+        #endregion
+
+        #region Authorization
+
+        /// <summary>
+        /// Defines whatewer each request shold be autorized via login 
+        /// </summary>
+        public bool IsAlwaysLogin { get; set; }
+        /// <summary>
+        /// The user name to be used for autorization 
+        /// </summary>
+        public string LoginUser { get; set; }
+        /// <summary>
+        /// The password to be used for autorization 
+        /// </summary>
+        public string LoginPassword { get; set; }
 
         #endregion
     }

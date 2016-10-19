@@ -24,6 +24,12 @@ namespace Abot.Core
             get { return (PolitenessElement)this["politeness"]; }
         }
 
+        [ConfigurationProperty("authorization")]
+        public AuthorizationElement Authorization
+        {
+            get { return (AuthorizationElement)this["authorization"]; }
+        }
+
         [ConfigurationProperty("extensionValues")]
         [ConfigurationCollection(typeof(ExtensionValueCollection), AddItemName = "add")]
         public ExtensionValueCollection ExtensionValues
@@ -35,11 +41,13 @@ namespace Abot.Core
         {
             AutoMapper.Mapper.CreateMap<CrawlBehaviorElement, CrawlConfiguration>();
             AutoMapper.Mapper.CreateMap<PolitenessElement, CrawlConfiguration>();
+            AutoMapper.Mapper.CreateMap<AuthorizationElement, CrawlConfiguration>();
 
 
             CrawlConfiguration config = new CrawlConfiguration();
             AutoMapper.Mapper.Map<CrawlBehaviorElement, CrawlConfiguration>(CrawlBehavior, config);
             AutoMapper.Mapper.Map<PolitenessElement, CrawlConfiguration>(Politeness, config);
+            AutoMapper.Mapper.Map<AuthorizationElement, CrawlConfiguration>(Authorization, config);
 
             foreach (ExtensionValueElement element in ExtensionValues)
                 config.ConfigurationExtensions.Add(element.Key, element.Value);
@@ -53,6 +61,36 @@ namespace Abot.Core
         }
     }
 
+
+    [Serializable]
+    public class AuthorizationElement : ConfigurationElement
+    {
+        /// <summary>
+        /// Defines whatewer each request shold be autorized via login 
+        /// </summary>
+        [ConfigurationProperty("isAlwaysLogin", IsRequired = false)]
+        public bool IsAlwaysLogin
+        {
+            get { return (bool)this["isAlwaysLogin"]; }
+        }
+
+        /// <summary>
+        /// The user name to be used for autorization 
+        /// </summary>
+        [ConfigurationProperty("loginUser", IsRequired = false)]
+        public string LoginUser
+        {
+            get { return (string)this["loginUser"]; }
+        }
+        /// <summary>
+        /// The password to be used for autorization 
+        /// </summary>
+        [ConfigurationProperty("loginPassword", IsRequired = false)]
+        public string LoginPassword
+        {
+            get { return (string)this["loginPassword"]; }
+        }
+    }
     [Serializable]
     public class PolitenessElement : ConfigurationElement
     {
@@ -66,6 +104,12 @@ namespace Abot.Core
         public bool IsRespectMetaRobotsNoFollowEnabled
         {
             get { return (bool)this["isRespectMetaRobotsNoFollowEnabled"]; }
+        }
+
+        [ConfigurationProperty("isRespectHttpXRobotsTagHeaderNoFollowEnabled", IsRequired = false)]
+        public bool IsRespectHttpXRobotsTagHeaderNoFollowEnabled
+        {
+            get { return (bool)this["isRespectHttpXRobotsTagHeaderNoFollowEnabled"]; }
         }
 
         [ConfigurationProperty("isRespectAnchorRelNoFollowEnabled", IsRequired = false)]
@@ -162,6 +206,12 @@ namespace Abot.Core
             get { return (bool)this["isExternalPageLinksCrawlingEnabled"]; }
         }
 
+        [ConfigurationProperty("isSslCertificateValidationEnabled", IsRequired = false, DefaultValue = true)]
+        public bool IsSslCertificateValidationEnabled
+        {
+            get { return (bool)this["isSslCertificateValidationEnabled"]; }
+        }
+
         [ConfigurationProperty("httpServicePointConnectionLimit", IsRequired = false, DefaultValue = 200)]
         public int HttpServicePointConnectionLimit
         {
@@ -198,6 +248,12 @@ namespace Abot.Core
             get { return (bool)this["isSendingCookiesEnabled"]; }
         }
 
+        [ConfigurationProperty("isRespectUrlNamedAnchorOrHashbangEnabled", IsRequired = false)]
+        public bool IsRespectUrlNamedAnchorOrHashbangEnabled
+        {
+            get { return (bool)this["isRespectUrlNamedAnchorOrHashbangEnabled"]; }
+        }
+
         [ConfigurationProperty("minAvailableMemoryRequiredInMb", IsRequired = false)]
         public int MinAvailableMemoryRequiredInMb
         {
@@ -220,6 +276,12 @@ namespace Abot.Core
         public int MaxCrawlDepth
         {
             get { return (int)this["maxCrawlDepth"]; }
+        }
+
+        [ConfigurationProperty("maxLinksPerPage", IsRequired = false, DefaultValue = 0)]
+        public int MaxLinksPerPage
+        {
+            get { return (int)this["maxLinksPerPage"]; }
         }
 
         [ConfigurationProperty("isForcedLinkParsingEnabled", IsRequired = false)]

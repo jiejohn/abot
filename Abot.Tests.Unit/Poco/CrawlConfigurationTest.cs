@@ -35,13 +35,21 @@ namespace Abot.Tests.Unit.Poco
             Assert.AreEqual(true, unitUnderTest.IsHttpRequestAutoRedirectsEnabled);
             Assert.AreEqual(false, unitUnderTest.IsHttpRequestAutomaticDecompressionEnabled);
             Assert.AreEqual(false, unitUnderTest.IsSendingCookiesEnabled);
+            Assert.AreEqual(true, unitUnderTest.IsSslCertificateValidationEnabled);
+            Assert.AreEqual(false, unitUnderTest.IsRespectUrlNamedAnchorOrHashbangEnabled);
             Assert.AreEqual(0, unitUnderTest.MaxMemoryUsageCacheTimeInSeconds);
             Assert.AreEqual(0, unitUnderTest.MaxMemoryUsageInMb);
             Assert.AreEqual(0, unitUnderTest.MinAvailableMemoryRequiredInMb);
             Assert.AreEqual(100, unitUnderTest.MaxCrawlDepth);
+            Assert.AreEqual(0, unitUnderTest.MaxLinksPerPage);
             Assert.AreEqual(false, unitUnderTest.IsForcedLinkParsingEnabled);
             Assert.AreEqual(0, unitUnderTest.MaxRetryCount);
             Assert.AreEqual(0, unitUnderTest.MinRetryDelayInMilliseconds);
+            Assert.AreEqual(null, unitUnderTest.LoginUser);
+            Assert.AreEqual(null, unitUnderTest.LoginPassword);
+            Assert.AreEqual(false, unitUnderTest.IsAlwaysLogin);
         }
+
+
     }
 }

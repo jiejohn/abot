@@ -57,11 +57,8 @@ namespace Abot.Tests.Unit.Crawler
         }
 
         [Test]
-        public void Crawl_MinCrawlDelayDelayZero_DomainRateLimiterNotCalled()
+        public void Crawl_MinCrawlDelayDelayZero_StillCallsDomainRateLimiter()
         {
-            Uri uri1 = new Uri(_rootUri.AbsoluteUri + "a.html");
-            Uri uri2 = new Uri(_rootUri.AbsoluteUri + "b.html");
-
             CrawledPage homePage = new CrawledPage(_rootUri)
             {
                 Content = new PageContent 
@@ -69,15 +66,8 @@ namespace Abot.Tests.Unit.Crawler
                     Text = "content here" 
                 }
             };
-            CrawledPage page1 = new CrawledPage(uri1);
-            CrawledPage page2 = new CrawledPage(uri2);
-
-            List<Uri> links = new List<Uri> { uri1, uri2 };
             
             _fakeHttpRequester.Setup(f => f.MakeRequest(_rootUri, It.IsAny<Func<CrawledPage, CrawlDecision>>())).Returns(homePage);
-            _fakeHttpRequester.Setup(f => f.MakeRequest(uri1, It.IsAny<Func<CrawledPage, CrawlDecision>>())).Returns(page1);
-            _fakeHttpRequester.Setup(f => f.MakeRequest(uri2, It.IsAny<Func<CrawledPage, CrawlDecision>>())).Returns(page2);
-            _fakeHyperLinkParser.Setup(f => f.GetLinks(It.Is<CrawledPage>(p => p.Uri == homePage.Uri))).Returns(links);
             _fakeCrawlDecisionMaker.Setup(f => f.ShouldCrawlPage(It.IsAny<PageToCrawl>(), It.IsAny<CrawlContext>())).Returns(new CrawlDecision { Allow = true });
             _fakeCrawlDecisionMaker.Setup(f => f.ShouldCrawlPageLinks(It.IsAny<CrawledPage>(), It.IsAny<CrawlContext>())).Returns(new CrawlDecision { Allow = true });
 
@@ -85,7 +75,7 @@ namespace Abot.Tests.Unit.Crawler
 
             _unitUnderTest.Crawl(_rootUri);
 
-            _fakeDomainRateLimiter.Verify(f => f.RateLimit(It.IsAny<Uri>()), Times.Never());
+            _fakeDomainRateLimiter.Verify(f => f.RateLimit(It.IsAny<Uri>()), Times.Exactly(1));
         }
 
         [Test]
@@ -123,7 +113,7 @@ namespace Abot.Tests.Unit.Crawler
         }
 
         [Test]
-        public void Crawl_IsRespectRobotsDotTextTrue_RobotsDotTextFound_ZeroCrawlDelay_DoesNotCallsDomainRateLimiter()
+        public void Crawl_IsRespectRobotsDotTextTrue_RobotsDotTextFound_ZeroCrawlDelay_StillCallsDomainRateLimiter()
         {
             Uri uri1 = new Uri(_rootUri.AbsoluteUri + "a.html");
             Uri uri2 = new Uri(_rootUri.AbsoluteUri + "b.html");
@@ -162,7 +152,7 @@ namespace Abot.Tests.Unit.Crawler
             _fakeRobotsDotText.VerifyAll();
             _fakeRobotsDotTextFinder.VerifyAll();
             _fakeDomainRateLimiter.Verify(f => f.AddDomain(It.IsAny<Uri>(), It.IsAny<long>()), Times.Exactly(0));
-            _fakeDomainRateLimiter.Verify(f => f.RateLimit(It.IsAny<Uri>()), Times.Exactly(0));
+            _fakeDomainRateLimiter.Verify(f => f.RateLimit(It.IsAny<Uri>()), Times.Exactly(3));
         }
 
         [Test]
@@ -302,6 +292,35 @@ namespace Abot.Tests.Unit.Crawler
             _fakeRobotsDotTextFinder.Setup(f => f.Find(It.IsAny<Uri>())).Returns(_fakeRobotsDotText.Object);
             _fakeHttpRequester.Setup(f => f.MakeRequest(_rootUri, It.IsAny<Func<CrawledPage, CrawlDecision>>())).Returns(page1);
             _fakeCrawlDecisionMaker.Setup(f => f.ShouldCrawlPage(It.IsAny<PageToCrawl>(), It.IsAny<CrawlContext>())).Returns(new CrawlDecision {Allow = true});
+            _dummyConfiguration.IsRespectRobotsDotTextEnabled = true;
+            _dummyConfiguration.IsIgnoreRobotsDotTextIfRootDisallowedEnabled = true;
+            _unitUnderTest = new PoliteWebCrawler(_dummyConfiguration, _fakeCrawlDecisionMaker.Object, _dummyThreadManager, _dummyScheduler, _fakeHttpRequester.Object, _fakeHyperLinkParser.Object, _fakeMemoryManager.Object, _fakeDomainRateLimiter.Object, _fakeRobotsDotTextFinder.Object);
+
+            _unitUnderTest.Crawl(_rootUri);
+
+            _fakeCrawlDecisionMaker.VerifyAll();
+            _fakeRobotsDotText.VerifyAll();
+            _fakeRobotsDotTextFinder.VerifyAll();
+            _fakeHttpRequester.VerifyAll();
+        }
+
+        [Test]
+        public void Crawl_IsRespectRobotsDotTextTrue_RobotsDotTextFound_RootPageIsAllowed_AllPagesBelowDisallowed_IsIgnoreRobotsDotTextIfRootDisallowedEnabledTrue_CallsHttpRequester()
+        {
+            CrawledPage homePage = new CrawledPage(_rootUri)
+            {
+                Content = new PageContent
+                {
+                    Text = "content here"
+                }
+            };
+            CrawledPage page1 = new CrawledPage(_rootUri);
+
+            _fakeRobotsDotText.Setup(f => f.IsUrlAllowed(_rootUri.AbsoluteUri, It.IsAny<string>())).Returns(true);
+            _fakeRobotsDotText.Setup(f => f.IsUrlAllowed(_rootUri.AbsoluteUri + "aaaaa", It.IsAny<string>())).Returns(false);
+            _fakeRobotsDotTextFinder.Setup(f => f.Find(It.IsAny<Uri>())).Returns(_fakeRobotsDotText.Object);
+            _fakeHttpRequester.Setup(f => f.MakeRequest(_rootUri, It.IsAny<Func<CrawledPage, CrawlDecision>>())).Returns(page1);
+            _fakeCrawlDecisionMaker.Setup(f => f.ShouldCrawlPage(It.IsAny<PageToCrawl>(), It.IsAny<CrawlContext>())).Returns(new CrawlDecision { Allow = true });
             _dummyConfiguration.IsRespectRobotsDotTextEnabled = true;
             _dummyConfiguration.IsIgnoreRobotsDotTextIfRootDisallowedEnabled = true;
             _unitUnderTest = new PoliteWebCrawler(_dummyConfiguration, _fakeCrawlDecisionMaker.Object, _dummyThreadManager, _dummyScheduler, _fakeHttpRequester.Object, _fakeHyperLinkParser.Object, _fakeMemoryManager.Object, _fakeDomainRateLimiter.Object, _fakeRobotsDotTextFinder.Object);

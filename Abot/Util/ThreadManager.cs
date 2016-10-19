@@ -12,7 +12,7 @@ namespace Abot.Util
         /// <summary>
         /// Max number of threads to use.
         /// </summary>
-        int MaxThreads { get; }
+        int MaxThreads { get; set; }
 
         /// <summary>
         /// Will perform the action asynchrously on a seperate thread
@@ -55,7 +55,7 @@ namespace Abot.Util
         public int MaxThreads
         {
             get;
-            private set;
+            set;
         }
 
         /// <summary>
@@ -79,8 +79,8 @@ namespace Abot.Util
                         _resetEvent.Reset();
 
                     _logger.DebugFormat("Starting another thread, increasing running threads to [{0}].", _numberOfRunningThreads);
-                    RunActionOnDedicatedThread(action);
                 }
+                RunActionOnDedicatedThread(action);
             }
             else
             {

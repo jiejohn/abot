@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using Abot.Poco;
 using System.Net;
 
@@ -25,7 +27,7 @@ namespace Abot.Core
         CrawlDecision ShouldDownloadPageContent(CrawledPage crawledPage, CrawlContext crawlContext);
 
         /// <summary>
-        /// Decides whether the page should be re-crawled on non-200 status
+        /// Decides whether the page should be re-crawled
         /// </summary>
         CrawlDecision ShouldRecrawlPage(CrawledPage crawledPage, CrawlContext crawlContext);
     }
@@ -110,7 +112,13 @@ namespace Abot.Core
             
             string pageContentType = crawledPage.HttpWebResponse.ContentType.ToLower().Trim();
             bool isDownloadable = false;
-            foreach (string downloadableContentType in crawlContext.CrawlConfiguration.DownloadableContentTypes.Split(','))
+            List<string> cleanDownloadableContentTypes = crawlContext.CrawlConfiguration.DownloadableContentTypes
+                .Split(',')
+                .Select(t => t.Trim())
+                .Where(t => !string.IsNullOrEmpty(t))
+                .ToList();
+
+            foreach (string downloadableContentType in cleanDownloadableContentTypes)
             {
                 if (pageContentType.Contains(downloadableContentType.ToLower().Trim()))
                 {
@@ -119,7 +127,7 @@ namespace Abot.Core
                 }
             }
             if (!isDownloadable)
-                return new CrawlDecision { Allow = false, Reason = "Content type is not any of the following: " + crawlContext.CrawlConfiguration.DownloadableContentTypes };
+                return new CrawlDecision { Allow = false, Reason = "Content type is not any of the following: " + string.Join(",", cleanDownloadableContentTypes) };
 
             if (crawlContext.CrawlConfiguration.MaxPageSizeInBytes > 0 && crawledPage.HttpWebResponse.ContentLength > crawlContext.CrawlConfiguration.MaxPageSizeInBytes)
                 return new CrawlDecision { Allow = false, Reason = string.Format("Page size of [{0}] bytes is above the max allowable of [{1}] bytes", crawledPage.HttpWebResponse.ContentLength, crawlContext.CrawlConfiguration.MaxPageSizeInBytes) };
@@ -127,7 +135,7 @@ namespace Abot.Core
             return new CrawlDecision { Allow = true };            
         }
 
-        public CrawlDecision ShouldRecrawlPage(CrawledPage crawledPage, CrawlContext crawlContext)
+        public virtual CrawlDecision ShouldRecrawlPage(CrawledPage crawledPage, CrawlContext crawlContext)
         {
             if (crawledPage == null)
                 return new CrawlDecision { Allow = false, Reason = "Null crawled page" };

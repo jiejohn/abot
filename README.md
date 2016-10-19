@@ -1,10 +1,10 @@
 #Abot [![Build Status](https://ci.appveyor.com/api/projects/status/b1ukruawvu6uujn0?svg=true)](https://ci.appveyor.com/project/sjdirect/abot)
 
+*Please star this project!!* Contact me with exciting opportunities!!
+
 ######C# web crawler built for speed and flexibility.
 
 Abot is an open source C# web crawler built for speed and flexibility. It takes care of the low level plumbing (multithreading, http requests, scheduling, link parsing, etc..). You just register for events to process the page data. You can also plugin your own implementations of core interfaces to take complete control over the crawl process. Abot targets .NET version 4.0. 
-
-*Please star this project!!*
 
 ######What's So Great About It?
   * Open Source (Free for commercial and personal use)
@@ -17,16 +17,27 @@ Abot is an open source C# web crawler built for speed and flexibility. It takes 
 
 ######Links of Interest
 
-  * [Ask questions and search for answers on the Community Forum](http://groups.google.com/group/abot-web-crawler)
-  * [Report Bugs or Suggest Features](https://github.com/sjdirect/abot/issues)
+  * [Ask a question](http://groups.google.com/group/abot-web-crawler)
+  * [Report a bug or suggest a feature](https://github.com/sjdirect/abot/issues)
   * [Learn how you can contribute](https://github.com/sjdirect/abot/wiki/Contribute)
   * [Need expert Abot customization?](https://github.com/sjdirect/abot/wiki/Custom-Development)
   * [Take the usage survey](https://www.surveymonkey.com/s/JS5826F) to help prioritize features/improvements
   * [Consider making a donation](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=G6ZY6BZNBFVQJ)
+  * [Unofficial Chinese Documentation](https://github.com/zixiliuyue/abot)
+
+######Use [AbotX](http://abotx.org) for powerful extensions/wrappers
+
+  * [Crawl multiple sites concurrently](http://abotx.org/Learn/ParallelCrawlerEngine)
+  * [Execute/Render Javascript](http://abotx.org/Learn/JavascriptRendering)
+  * [Avoid getting blocked by sites](http://abotx.org/Learn/AutoThrottling)
+  * [Auto Tuning](http://abotx.org/Learn/AutoTuning)
+  * [Auto Throttling](http://abotx.org/Learn/AutoThrottling)
+  * [Pause/Resume live crawls](http://abotx.org/Learn/CrawlerX#crawlerx-pause-resume)
+  * [Simplified pluggability/extensibility](https://abotx.org/Learn/CrawlerX#easy-override)
 
 <br /><br />
 <hr />
-##Quick Start
+##Quick Start 
 
 ######Installing Abot
   * Install Abot using [Nuget](https://www.nuget.org/packages/Abot/)
@@ -44,37 +55,14 @@ using Abot.Poco;
 ```xml
 <configuration>
   <configSections>
-    <section name="log4net" type="log4net.Config.Log4NetConfigurationSectionHandler, log4net"/>
     <section name="abot" type="Abot.Core.AbotConfigurationSectionHandler, Abot"/>
   </configSections>
+  
   <runtime>
     <!-- Experiment with these to see if it helps your memory usage, USE ONLY ONE OF THE FOLLOWING -->
     <!--<gcServer enabled="true"/>-->
     <!--<gcConcurrent enabled="true"/>-->
   </runtime>
-  <log4net>
-    <appender name="ConsoleAppender" type="log4net.Appender.ConsoleAppender">
-      <layout type="log4net.Layout.PatternLayout">
-        <conversionPattern value="[%date] [%thread] [%-5level] - %message%newline"/>
-      </layout>
-    </appender>
-    <appender name="RollingFileAppender" type="log4net.Appender.RollingFileAppender">
-      <file value="abotlog.txt"/>
-      <appendToFile value="true"/>
-      <rollingStyle value="Size"/>
-      <maxSizeRollBackups value="10"/>
-      <maximumFileSize value="10240KB"/>
-      <staticLogFileName value="true"/>
-      <layout type="log4net.Layout.PatternLayout">
-        <conversionPattern value="[%date] [%-3thread] [%-5level] - %message%newline"/>
-      </layout>
-    </appender>
-    <root>
-      <level value="INFO"/>
-      <appender-ref ref="ConsoleAppender"/>
-      <appender-ref ref="RollingFileAppender"/>
-    </root>
-  </log4net>
 
   <abot>
     <crawlBehavior 
@@ -94,17 +82,25 @@ using Abot.Poco;
       isHttpRequestAutoRedirectsEnabled="true" 
       isHttpRequestAutomaticDecompressionEnabled="false"
       isSendingCookiesEnabled="false"
+      isSslCertificateValidationEnabled="false"
+      isRespectUrlNamedAnchorOrHashbangEnabled="false"
       minAvailableMemoryRequiredInMb="0"
       maxMemoryUsageInMb="0"
       maxMemoryUsageCacheTimeInSeconds="0"
       maxCrawlDepth="1000"
+	  maxLinksPerPage="1000"
       isForcedLinkParsingEnabled="false"
       maxRetryCount="0"
       minRetryDelayInMilliseconds="0"
       />
+    <authorization
+      isAlwaysLogin="false"
+      loginUser=""
+      loginPassword="" />	  
     <politeness 
       isRespectRobotsDotTextEnabled="false"
       isRespectMetaRobotsNoFollowEnabled="false"
+	  isRespectHttpXRobotsTagHeaderNoFollowEnabled="false"
       isRespectAnchorRelNoFollowEnabled="false"
       isIgnoreRobotsDotTextIfRootDisallowedEnabled="false"
       robotsDotTextUserAgentString="abot"
@@ -169,6 +165,9 @@ void crawler_ProcessPageCrawlCompleted(object sender, PageCrawlCompletedArgs e)
 
 	if (string.IsNullOrEmpty(crawledPage.Content.Text))
 		Console.WriteLine("Page had no content {0}", crawledPage.Uri.AbsoluteUri);
+	
+	var htmlAgilityPackDocument = crawledPage.HtmlDocument; //Html Agility Pack parser
+	var angleSharpHtmlDocument = crawledPage.AngleSharpHtmlDocument; //AngleSharp parser
 }
 
 void crawler_PageLinksCrawlDisallowed(object sender, PageLinksCrawlDisallowedArgs e)
@@ -275,7 +274,7 @@ The following configuration data should be added to the app.config file of the a
 
 Abot was designed to be as pluggable as possible. This allows you to easily alter the way it works to suite your needs.
 
-The easiest way to change Abot's behavior for common features is to change the config values that control them. See the [Quick Start](#quickstart) page for examples on the different ways Abot can be configured.
+The easiest way to change Abot's behavior for common features is to change the config values that control them. See the [Quick Start](#quick-start) page for examples on the different ways Abot can be configured.
 
 ####CrawlDecision Callbacks/Delegates
 Sometimes you don't want to create a class and go through the ceremony of extending a base class or implementing the interface directly. For all you lazy developers out there Abot provides a shorthand method to easily add your custom crawl decision logic. NOTE: The ICrawlDecisionMaker's corresponding method is called first and if it does not "allow" a decision, these callbacks will not be called.
@@ -304,7 +303,7 @@ crawler.ShouldDownloadPageContent((crawledPage, crawlContext) =>
 crawler.ShouldCrawlPageLinks((crawledPage, crawlContext) =>
 {
 	CrawlDecision decision = new CrawlDecision{ Allow = true };
-	if (crawledPage.PageSizeInBytes < 100)
+	if (crawledPage.Content.Bytes.Length < 100)
 		return new CrawlDecision { Allow = false, Reason = "Just crawl links in pages that have at least 100 bytes" };
 
 	return decision;
@@ -312,7 +311,7 @@ crawler.ShouldCrawlPageLinks((crawledPage, crawlContext) =>
 ```
 
 ####Custom Implementations
-PoliteWebCrawler is the master of orchestrating the crawl. It's job is to coordinate all the utility classes to "crawl" a site. PoliteWebCrawler accepts an alternate implementation for all its dependencies through it's constructor.
+PoliteWebCrawler is the master of orchestrating the crawl. Its job is to coordinate all the utility classes to "crawl" a site. PoliteWebCrawler accepts an alternate implementation for all its dependencies through its constructor.
  
 ```c#
 PoliteWebCrawler crawler = new PoliteWebCrawler(
@@ -471,7 +470,7 @@ public interface IPageRequester
 ######IHyperLinkParser
 The IHyperLinkParser interface deals with parsing the links out of raw html.
 
-[HapHyperlinkParser.cs](https://github.com/sjdirect/abot/blob/master/Abot/Core/HapHyperLinkParser.cs) is the default IHyperLinkParser used by the crawler. It uses the well known parsing library [Html Agility Pack](http://htmlagilitypack.codeplex.com/). There is also an alternative implementation [CsQueryHyperLinkParser.cs](https://github.com/sjdirect/abot/blob/master/Abot/Core/CsQueryHyperLinkParser.cs) which uses [CsQuery](https://github.com/jamietre/CsQuery) to do the parsing. CsQuery uses a css style selector like jquery but all in c#. 
+[HapHyperlinkParser.cs](https://github.com/sjdirect/abot/blob/master/Abot/Core/HapHyperLinkParser.cs) is the default IHyperLinkParser used by the crawler. It uses the well known parsing library [Html Agility Pack](http://htmlagilitypack.codeplex.com/). There is also an alternative implementation [AngleSharpHyperLinkParser.cs](https://github.com/sjdirect/abot/blob/master/Abot/Core/AngleSharpHyperLinkParser.cs) which uses [AngleSharp](https://github.com/AngleSharp/AngleSharp) to do the parsing. AngleSharp uses a css style selector like jquery but all in c#. 
 
 ```c#
 /// <summary>
